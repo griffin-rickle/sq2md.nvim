@@ -25,9 +25,10 @@ endfunction
 
 function! ClearQueryResults()
     if bufwinnr("QueryResults") < 0
-       call bufnr("QueryResults", 1)
+        call bufnr("QueryResults", 1)
+        execute("sb QueryResults")
     endif
-    execute("sb QueryResults")
+    execute(bufwinnr("QueryResults") .. 'wincmd w')
     execute("normal ggdG")
     call setbufvar('QueryResults', '&buftype', 'nofile')
     call setbufvar('QueryResults', '&wrap', 0)
@@ -46,3 +47,4 @@ endfunction
 
 command! -nargs=0 BufferQuery call BufferQuery()
 command! -nargs=0 NewQuery call NewQuery()
+
