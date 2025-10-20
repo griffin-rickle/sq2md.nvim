@@ -1,2 +1,0 @@
-http://candidtim.github.io/vim/2017/08/11/write-vim-plugin-in-python.html
-https://vimdoc.sourceforge.net/htmldoc/if_pyth.html#python-vim

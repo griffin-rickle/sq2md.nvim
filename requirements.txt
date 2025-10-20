@@ -1,2 +1,0 @@
-requests
-mdtable @ git+https://github.com/griffin-rickle/mdtable.git@master#egg=mdtable
