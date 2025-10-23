@@ -4,22 +4,6 @@
 
 local M = {}
 
-local function getenv(name, default)
-  local v = vim.fn.getenv(name)
-  if v == vim.NIL or v == '' then return default end
-  return v
-end
-
--- default config (override by setting env vars or by calling M.setup)
-M.config = {
-  endpoint = getenv("SPARQL_ENDPOINT", nil), -- default endpoint (optional)
-  user = getenv("SPARQL_USER", nil),
-  pass = getenv("SPARQL_PASS", nil),
-  -- accept = "text/tab-separated-values", -- or "text/csv"
-  accept = "text/csv", -- or "text/csv"
-  timeout = 30,
-}
-
 function M.setup(opts)
   opts = opts or {}
   for k, v in pairs(opts) do M.config[k] = v end
@@ -364,8 +348,6 @@ function M.prompt_and_run()
   end)
 end
 
--- Add this to lua/sparql_query/init.lua (append near the end of the file)
-
 -- Read a query from a file and execute it. endpoint is required.
 -- Usage: require('sparql_query').exec_file(endpoint, file_path, opts)
 function M.exec_file(endpoint, file_path, opts)
@@ -549,42 +531,7 @@ function M.choose_config(opts, callback)
   end)
 end
 
--- convenience: run a prompt -> then prompt for query -> execute using chosen config
-function M.prompt_and_run_with_config()
-  M.choose_config({ prefer_last = true }, function(cfg)
-    if not cfg then return end
-    vim.ui.input({ prompt = "SPARQL> " }, function(query)
-      if not query or query == "" then return end
-      -- build opts from config (copy)
-      local run_opts = {
-        endpoint = cfg.endpoint,
-        db = cfg.db,
-        user = cfg.user,
-        pass = cfg.pass,
-        accept = cfg.accept,
-        timeout = cfg.timeout,
-      }
-      M.exec_and_show(query, run_opts)
-    end)
-  end)
-end
-
--- helper: write a string to a temp file and return the path
-local function write_tmp_query(content)
-  local tmp = vim.fn.tempname() .. ".rq"
-  local f, err = io.open(tmp, "w")
-  if not f then
-    vim.notify("Could not create temp query file: " .. tostring(err), vim.log.levels.ERROR)
-    return nil
-  end
-  f:write(content)
-  f:close()
-  return tmp
-end
-
--- Run using the specified (1-based) start/end lines from current buffer
--- If no range was provided (both args equal current cursor line), use the whole buffer.
-function M.run_with_config_from_range(start_line, end_line)
+function M.get_query_contents(start_line, end_line)
   -- convert to numbers (may be nil when called from other code)
   local bufnr = 0
   local buf_line_count = vim.api.nvim_buf_line_count(bufnr)
@@ -612,44 +559,42 @@ function M.run_with_config_from_range(start_line, end_line)
     end_line = buf_line_count
   end
 
+  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+  query = table.concat(lines, "\n")
+  query = query:gsub("\r\n", "\n")
+
+  if query:match("^%s*$") then
+    vim.notify("Selected range is empty", vim.log.levels.WARN)
+    return
+  end
+
+  return query
+end
+
+function M.run_with_last_config(start_line, end_line)
+  local st = load_state()
+  local last = st.last
+  local cfg = nil
+  if last and M._configs_map then cfg = M._configs_map[last] end
+  query_content = M.get_query_contents(start_line, end_line)
+  if not cfg then
+    vim.notify("No previously used configuration detected")
+    M.choose_config({ prefer_last = true }, function(cfg)
+      if not cfg then return end
+      M.exec_and_show(query_content, cfg)
+    end)
+  else
+    M.exec_and_show(query_content, cfg)
+  end
+end
+
+function M.choose_config_and_run(start_line, end_line)
+
   M.choose_config({ prefer_last = true }, function(cfg)
     if not cfg then return end
+    query_content = M.get_query_contents(start_line, end_line)
 
-    local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-    local query = table.concat(lines, "\n")
-
-    if query:match("^%s*$") then
-      vim.notify("Selected range is empty", vim.log.levels.WARN)
-      return
-    end
-
-    -- normalize CRLF -> LF
-    query = query:gsub("\r\n", "\n")
-
-    -- decide whether to use a temp file (multiline or large)
-    local should_use_file = query:find("\n") ~= nil or #query > 2000
-
-    local opts = {
-      endpoint = cfg.endpoint,
-      db       = cfg.db,
-      user     = cfg.user,
-      pass     = cfg.pass,
-      accept   = cfg.accept,
-      timeout  = cfg.timeout,
-    }
-
-    if should_use_file and M.exec_file then
-      -- write tmp and call exec_file (helper write_tmp_query expected)
-      local tmp = write_tmp_query(query)
-      if not tmp then
-        vim.notify("Failed to write temp query file", vim.log.levels.ERROR)
-        return
-      end
-      M.exec_file(cfg.endpoint, tmp, opts)
-      vim.defer_fn(function() pcall(os.remove, tmp) end, 2000)
-    else
-      M.exec_and_show(query, opts)
-    end
+    M.exec_and_show(query_content, cfg)
   end)
 end
 
