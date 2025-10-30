@@ -1,7 +1,3 @@
--- lua/sparql_query/init.lua
--- Minimal SPARQL client for Neovim plugins
--- Uses plenary.curl if available, otherwise falls back to `curl` CLI via jobstart.
-
 local M = {}
 
 function M.setup(opts)
@@ -235,7 +231,7 @@ function M.execute(query, opts, callback)
 
   local endpoint = opts.endpoint or M.config.endpoint
   if not endpoint then
-    return callback("no SPARQL endpoint configured (set SPARQL_ENDPOINT or pass opts.endpoint)", nil)
+    return callback("no SPARQL endpoint configured", nil)
   end
   local db = opts.db
   local url = build_query_url(endpoint, db)
@@ -260,8 +256,7 @@ function M.execute(query, opts, callback)
     return callback(nil, resp)
   end)
 end
---
--- Replace your old show_result with this one
+
 function show_result(lines, ft, title)
   ft = ft or "text"
   title = title or "SPARQL Result"
@@ -349,14 +344,14 @@ function M.prompt_and_run()
 end
 
 -- Read a query from a file and execute it. endpoint is required.
--- Usage: require('sparql_query').exec_file(endpoint, file_path, opts)
+-- Usage: require('sq2md').exec_file(endpoint, file_path, opts)
 function M.exec_file(endpoint, file_path, opts)
   if not endpoint or endpoint == "" then
-    vim.notify("SparqlQuery.exec_file: endpoint required", vim.log.levels.ERROR)
+    vim.notify("sq2md.exec_file: endpoint required", vim.log.levels.ERROR)
     return
   end
   if not file_path or file_path == "" then
-    vim.notify("SparqlQuery.exec_file: file path required", vim.log.levels.ERROR)
+    vim.notify("sq2md.exec_file: file path required", vim.log.levels.ERROR)
     return
   end
 
@@ -376,9 +371,6 @@ function M.exec_file(endpoint, file_path, opts)
   -- Reuse existing exec_and_show to run and display the query
   M.exec_and_show(query, opts)
 end
-
--- configuration picker + persistence for sparql_query
--- Paste into lua/sparql_query/init.lua (merge with existing M table)
 
 local uv = vim.loop
 local api = vim.api
