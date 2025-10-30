@@ -1,10 +1,5 @@
 local M = {}
 
-function M.setup(opts)
-  opts = opts or {}
-  for k, v in pairs(opts) do M.config[k] = v end
-end
-
 local function parse_csv_line(line)
   local res = {}
   local field = ""
@@ -473,7 +468,7 @@ function M.choose_config(opts, callback)
 
   local list = build_display_list()
   if #list == 0 then
-    vim.notify("No sparql_query configs defined. Use require('sparql_query').setup{ configs = {...} }", vim.log.levels.ERROR)
+    vim.notify("No sparql_query configs defined. Use require('sq2md').setup{ configs = {...} }", vim.log.levels.ERROR)
     return callback(nil)
   end
 
