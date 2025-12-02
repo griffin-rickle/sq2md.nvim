@@ -168,7 +168,7 @@ local function call_curl_cli(url, body, headers, opts, callback)
   local out = {}
   local err = {}
   local job = vim.fn.jobstart(cmd, {
-    stdout_buffered = true,
+    stdout_buffered = false,
     stderr_buffered = true,
     on_stdout = function(_, data)
       if data then vim.list_extend(out, data) end
@@ -262,9 +262,7 @@ function show_result(lines, ft, title)
 
     -- update contents (replace all lines)
     -- use set_lines: start=0 end=-1 replacement
-    vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-    vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
 
     -- keep window focus on results (optional). If you prefer to return focus to previous window, save/restore it.
     -- Here we leave focus in the result window. To restore focus, capture previous winid before calling open_or_reuse and set it back.
